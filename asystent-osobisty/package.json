@@ -1,0 +1,7 @@
+{
+  "name": "asystent-osobisty",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Osobisty asystent dnia (PWA) zintegrowany z Notion - Etap 1"
+}
