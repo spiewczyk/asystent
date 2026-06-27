@@ -17,14 +17,14 @@ Nic nie trafia do Notion bez Twojego potwierdzenia.
 
 1. Wejdź na **https://www.notion.so/my-integrations** → **New integration**.
 2. Nazwa: `Asystent`. Wybierz swój workspace. Typ: **Internal**.
-3. Skopiuj **Internal Integration Secret** (zaczyna się od `secret_` lub `ntn_`) — to będzie `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`.
+3. Skopiuj **Internal Integration Secret** (zaczyna się od `secret_` lub `ntn_`) — to będzie ``.
 4. **WAŻNE — udostępnij bazy integracji:** otwórz stronę **🧠 Drugi Mózg** w Notion → menu `•••` (prawy górny róg) → **Connections / Połączenia** → **Add connection** → wybierz `Asystent`.
    Dzięki temu, że strona jest nadrzędna, integracja dostaje dostęp do wszystkich baz pod spodem (Zadania, Projekty, Rutyny itd.).
 
 ### 2. Klucz AI — Google Gemini (DARMOWY, bez karty kredytowej)
 
 1. Wejdź na **https://aistudio.google.com/apikey** → zaloguj się kontem Google.
-2. **Create API key** → skopiuj — to `AQ.Ab8RN6IYKtMNkJzRG4ssoTZ83F5eeh9iWOsnhXOolSQ35Xp4XQ`.
+2. **Create API key** → skopiuj — to ``.
 3. Nie włączaj płatności. Darmowy limit (model `gemini-2.0-flash`) to ok. **1500 zapytań/dobę** — z naddatkiem na osobisty użytek.
 
 > Cała aplikacja działa **za darmo**: Vercel (plan Hobby), Notion API i Gemini — wszystko ma darmowe limity wystarczające do prywatnego użytku.
