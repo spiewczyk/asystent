@@ -39,7 +39,6 @@ export async function POST(req: Request) {
       today: todayStr(),
     });
 
-    // Gemini używa ról "user" / "model".
     const contents = messages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
@@ -55,7 +54,7 @@ export async function POST(req: Request) {
         generationConfig: {
           temperature: 0.3,
           responseMimeType: "application/json",
-          maxOutputTokens: 2048,
+          maxOutputTokens: 8192,
         },
       }),
     });
@@ -76,8 +75,14 @@ export async function POST(req: Request) {
     try {
       parsed = extractJson(raw);
     } catch {
-      parsed = { reply: raw || "Nie udało się odczytać odpowiedzi.", proposals: [] };
+      parsed = {
+        reply:
+          "Nie udało mi się poprawnie sformułować propozycji (odpowiedź mogła zostać ucięta). Spróbuj jeszcze raz, najlepiej krótszą wiadomością.",
+        proposals: [],
+      };
     }
+    if (!parsed || typeof parsed !== "object") parsed = { reply: "", proposals: [] };
+    if (typeof parsed.reply !== "string") parsed.reply = "";
     if (!Array.isArray(parsed.proposals)) parsed.proposals = [];
     return NextResponse.json(parsed);
   } catch (e: any) {
