@@ -39,6 +39,7 @@ export async function POST(req: Request) {
       today: todayStr(),
     });
 
+    // Gemini używa ról "user" / "model".
     const contents = messages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
@@ -75,6 +76,7 @@ export async function POST(req: Request) {
     try {
       parsed = extractJson(raw);
     } catch {
+      // Nie pokazujemy użytkownikowi surowego JSON-a — dajemy czytelny komunikat.
       parsed = {
         reply:
           "Nie udało mi się poprawnie sformułować propozycji (odpowiedź mogła zostać ucięta). Spróbuj jeszcze raz, najlepiej krótszą wiadomością.",

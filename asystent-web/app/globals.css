@@ -318,6 +318,114 @@ button {
   font-style: italic;
 }
 
+/* ---------- Nav / Panel ---------- */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.navlink {
+  background: var(--block);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 13px;
+  color: var(--text);
+  text-decoration: none;
+}
+.navlink:hover {
+  background: var(--hover);
+}
+
+.counts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.count {
+  flex: 1;
+  min-width: 70px;
+  background: var(--block);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.count b {
+  font-size: 22px;
+  line-height: 1;
+}
+.count span {
+  font-size: 11px;
+  color: var(--text-light);
+}
+
+.sec {
+  margin-top: 18px;
+}
+.sec-h {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sec-count {
+  font-size: 11px;
+  color: var(--text-light);
+  background: var(--block);
+  border-radius: 10px;
+  padding: 1px 7px;
+}
+.sec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.it {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 14px;
+}
+.it:hover {
+  background: var(--hover);
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.it-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.it-date {
+  font-size: 12px;
+  color: var(--text-light);
+  flex-shrink: 0;
+}
+.it-tag {
+  font-size: 11px;
+  color: var(--text-light);
+  background: var(--block);
+  border-radius: 6px;
+  padding: 1px 7px;
+  flex-shrink: 0;
+}
+
 /* ---------- Login ---------- */
 .login-wrap {
   min-height: 100vh;

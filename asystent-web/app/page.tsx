@@ -104,9 +104,14 @@ export default function Home() {
           <h1>🧠 Asystent</h1>
           <div className="sub">Pisz, co masz do zrobienia — przypiszę to do Notion</div>
         </div>
-        <button className="logout" onClick={logout}>
-          Wyloguj
-        </button>
+        <div className="nav">
+          <a className="navlink" href="/panel">
+            🌅 Panel
+          </a>
+          <button className="logout" onClick={logout}>
+            Wyloguj
+          </button>
+        </div>
       </div>
 
       <div className="chat" ref={chatRef}>
