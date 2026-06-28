@@ -318,6 +318,49 @@ button {
   font-style: italic;
 }
 
+/* ---------- Dashboard (panel na górze) ---------- */
+.dash {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--block);
+  margin-bottom: 8px;
+}
+.dash-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 10px;
+}
+.dash-refresh {
+  background: none;
+  border: none;
+  color: var(--text-light);
+  font-size: 15px;
+  line-height: 1;
+}
+.dash-refresh:hover {
+  color: var(--text);
+}
+.dash-loading {
+  color: var(--text-light);
+  font-size: 13px;
+}
+.dash-clear {
+  color: var(--green);
+  font-size: 14px;
+  padding: 4px 0;
+}
+.dash .sec {
+  margin-top: 12px;
+}
+.dash .it {
+  background: var(--bg);
+}
+
 /* ---------- Nav / Panel ---------- */
 .nav {
   display: flex;

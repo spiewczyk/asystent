@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProposalCard, { Proposal, DbDef } from "../components/ProposalCard";
+import Dashboard from "../components/Dashboard";
 
 interface ChatItem {
   role: "user" | "assistant";
@@ -38,7 +39,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
+    // Przewijaj na dół tylko gdy trwa rozmowa — na starcie zostaw panel u góry.
+    if (items.length > 0) {
+      chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
+    }
   }, [items, loading]);
 
   async function send(text?: string) {
@@ -104,17 +108,14 @@ export default function Home() {
           <h1>🧠 Asystent</h1>
           <div className="sub">Pisz, co masz do zrobienia — przypiszę to do Notion</div>
         </div>
-        <div className="nav">
-          <a className="navlink" href="/panel">
-            🌅 Panel
-          </a>
-          <button className="logout" onClick={logout}>
-            Wyloguj
-          </button>
-        </div>
+        <button className="logout" onClick={logout}>
+          Wyloguj
+        </button>
       </div>
 
       <div className="chat" ref={chatRef}>
+        <Dashboard />
+
         {items.length === 0 && (
           <div className="empty">
             Napisz w skrócie, co masz na głowie.
