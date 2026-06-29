@@ -79,14 +79,16 @@ export async function buildDashboard() {
     return "later";
   }
 
-  // Mapa Obszarów (id → nazwa) do pokazania kategorii
-  let obszarMap: Record<string, string> = {};
-  try {
-    const opts = await getAllOptions();
-    obszarMap = Object.fromEntries((opts.obszary || []).map((o: any) => [o.id, o.name]));
-  } catch {
-    obszarMap = {};
-  }
+  // Wszystkie zapytania równolegle (szybsze ładowanie)
+  const [opts, zadaniaPages, projektyPages, rutynyPages] = await Promise.all([
+    getAllOptions().catch(() => ({ obszary: [], projekty: [] })),
+    queryAll(DATABASES.zadania.database_id),
+    queryAll(DATABASES.projekty.database_id),
+    queryAll(DATABASES.rutyny.database_id),
+  ]);
+  const obszarMap: Record<string, string> = Object.fromEntries(
+    (opts.obszary || []).map((o: any) => [o.id, o.name])
+  );
 
   // dni najbliższego tygodnia (obciążenie)
   const workloadMap: Record<string, number> = {};
@@ -102,7 +104,6 @@ export async function buildDashboard() {
   let dzisTotal = 0;
 
   // --- ZADANIA ---
-  const zadaniaPages = await queryAll(DATABASES.zadania.database_id);
   const zadania = emptyBuckets();
   for (const p of zadaniaPages) {
     const status = selectVal(p, "Status");
@@ -141,7 +142,6 @@ export async function buildDashboard() {
   const todayStats = { done: dzisDone, total: dzisTotal };
 
   // --- PROJEKTY ---
-  const projektyPages = await queryAll(DATABASES.projekty.database_id);
   const projekty = emptyBuckets();
   const projektyActive: Item[] = [];
   for (const p of projektyPages) {
@@ -163,7 +163,6 @@ export async function buildDashboard() {
   }
 
   // --- RUTYNY (aktywne, nadchodzące/zaległe w tym tygodniu) ---
-  const rutynyPages = await queryAll(DATABASES.rutyny.database_id);
   const rutynyDue: Item[] = [];
   for (const p of rutynyPages) {
     if (!checkboxVal(p, "Aktywna")) continue;
@@ -200,5 +199,6 @@ export async function buildDashboard() {
     counts,
     workload,
     todayStats,
+    options: { obszary: opts.obszary || [], projekty: opts.projekty || [] },
   };
 }

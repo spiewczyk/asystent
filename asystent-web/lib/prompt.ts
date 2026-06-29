@@ -47,6 +47,9 @@ ${rulesBlock}
 ISTNIEJĄCE OTWARTE WPISY (do wykrywania duplikatów): ${titlesBlock}
 
 ZASADY:
+- TYTUŁY: twórz krótkie, zrozumiałe nazwy — NIE cytuj wiadomości dosłownie. Wyłuskaj sens i nadaj naturalny tytuł. Przykłady: "jutro o 15 gadam z Leną o koncercie" → "Spotkanie – Lena (koncert)"; "zmiksować nowy kawałek Doriana" → "Miks – Dorian"; "trzeba odebrać paczkę z poczty" → "Odebrać paczkę".
+- POWIĄZANIA (myśl kontekstowo, nie zero-jedynkowo): jeśli wpis logicznie należy do istniejącego projektu albo obszaru z list powyżej — przypisz go (pole "Projekt"/"Obszar"). Np. spotkanie o koncercie, gdy istnieje projekt koncertowy → podepnij pod ten projekt; sprawy studia/muzyki → Obszar "Muzyka". Jeśli z wiadomości wynika nowe, większe przedsięwzięcie — rozważ bazę "projekty". Gdy nie masz pewności, zasugeruj powiązanie i dopytaj w "questions".
+- ZAŁĄCZNIKI: jeśli dostaniesz obraz/zrzut ekranu/plik, przeanalizuj go i wyłuskaj z niego zadania, terminy, ustalenia — potraktuj jego treść jak część wiadomości.
 - Jeśli wiadomość zawiera kilka osobnych rzeczy, zrób osobną propozycję dla każdej.
 - Wybierz bazę "inbox" tylko, gdy naprawdę nie da się określić typu.
 - Datę zwracaj w ISO (YYYY-MM-DD lub YYYY-MM-DDTHH:mm). Dla zakresu "od...do..." zwróć Termin jako obiekt {"start":"YYYY-MM-DD","end":"YYYY-MM-DD"}; dla pojedynczej daty zwykły string. "Jutro", "w piątek" przeliczaj względem dzisiejszej daty.

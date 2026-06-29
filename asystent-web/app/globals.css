@@ -368,6 +368,37 @@ button {
 .mic:hover {
   background: var(--hover);
 }
+.mic.listening {
+  background: #eb5757;
+  border-color: #eb5757;
+  color: #fff;
+  animation: micpulse 1s infinite;
+}
+@keyframes micpulse {
+  0% { box-shadow: 0 0 0 0 rgba(235, 87, 87, 0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(235, 87, 87, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(235, 87, 87, 0); }
+}
+.attach-chip {
+  max-width: 760px;
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--block);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 13px;
+  width: fit-content;
+}
+.attach-chip button {
+  background: none;
+  border: none;
+  color: var(--text-light);
+  font-size: 13px;
+  cursor: pointer;
+}
 
 /* ---------- Composer ---------- */
 .composer {
@@ -725,6 +756,106 @@ button {
 }
 .plan-block .tl-ev {
   padding: 6px 0;
+}
+
+/* inline edycja */
+.inline-sel,
+.date-input {
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+}
+.it-tag.obszar.as-btn {
+  cursor: pointer;
+}
+.it-tag.obszar.as-btn:hover {
+  filter: brightness(0.96);
+}
+.date-pill {
+  cursor: pointer;
+}
+.mini.trash {
+  border-color: #f3c3c3;
+}
+.mini.trash:hover {
+  background: #fdecec;
+}
+
+/* undo */
+.undo-bar {
+  position: sticky;
+  bottom: 8px;
+  margin-top: 12px;
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+.undo-bar button {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: var(--bg);
+  border-radius: 6px;
+  padding: 3px 12px;
+  font-size: 13px;
+}
+
+/* Plan — 3 najważniejsze */
+.mit {
+  margin-bottom: 14px;
+}
+.mit-h {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-bottom: 8px;
+}
+.mit-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid #9b9a97;
+  border-radius: 8px;
+  padding: 9px 11px;
+  margin-bottom: 6px;
+  text-decoration: none;
+  color: var(--text);
+}
+.mit-card:hover {
+  background: var(--hover);
+}
+.mit-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--block);
+  color: var(--text-light);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.mit-name {
+  flex: 1;
+  font-size: 14px;
+  word-break: break-word;
+}
+.focus {
+  font-size: 13px;
+  color: var(--accent);
+  margin-top: 6px;
 }
 
 /* szybkie dodawanie */

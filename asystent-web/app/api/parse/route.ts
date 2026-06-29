@@ -26,7 +26,10 @@ function extractJson(text: string): any {
 
 export async function POST(req: Request) {
   try {
-    const { messages } = (await req.json()) as { messages: Msg[] };
+    const { messages, image } = (await req.json()) as {
+      messages: Msg[];
+      image?: { mime?: string; data?: string };
+    };
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: "Brak GEMINI_API_KEY" }, { status: 500 });
@@ -47,10 +50,16 @@ export async function POST(req: Request) {
     });
 
     // Gemini używa ról "user" / "model".
-    const contents = messages.map((m) => ({
+    const contents: any[] = messages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
+      parts: [{ text: m.content }] as any[],
     }));
+    // Załącznik (obraz/zrzut/PDF) — dołącz do ostatniej wiadomości użytkownika
+    if (image && image.data && contents.length) {
+      contents[contents.length - 1].parts.push({
+        inlineData: { mimeType: image.mime || "image/png", data: image.data },
+      });
+    }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const resp = await fetch(url, {

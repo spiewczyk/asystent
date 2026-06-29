@@ -45,12 +45,19 @@ export async function fetchOpenTitles(): Promise<string[]> {
   return titles;
 }
 
+// Krótki cache (listy Obszarów/Projektów rzadko się zmieniają) — przyspiesza ładowanie.
+let _optCache: { t: number; data: { obszary: any[]; projekty: any[] } } | null = null;
+const OPT_TTL = 60000;
+
 export async function getAllOptions() {
+  if (_optCache && Date.now() - _optCache.t < OPT_TTL) return _optCache.data;
   const [obszary, projekty] = await Promise.all([
     fetchRelationOptions(RELATION_SOURCES.obszary),
     fetchRelationOptions(RELATION_SOURCES.projekty),
   ]);
-  return { obszary, projekty };
+  const data = { obszary, projekty };
+  _optCache = { t: Date.now(), data };
+  return data;
 }
 
 function resolveRelationIds(

@@ -28,6 +28,10 @@ export default function Home() {
   }>({ databases: [], obszary: [], projekty: [] });
   const chatRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const [listening, setListening] = useState(false);
+  const recRef = useRef<any>(null);
+  const [attach, setAttach] = useState<{ name: string; mime: string; data: string } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/options")
@@ -46,9 +50,12 @@ export default function Home() {
   }, [items, loading]);
 
   async function send(text?: string) {
-    const message = (text ?? input).trim();
-    if (!message || loading) return;
+    let message = (text ?? input).trim();
+    if ((!message && !attach) || loading) return;
+    const img = attach;
+    if (!message && img) message = "Przeanalizuj załącznik i wyłuskaj z niego zadania/terminy.";
     setInput("");
+    setAttach(null);
     // Anthropic odrzuca puste wiadomości — pomijamy je, a propozycje bez tekstu
     // streszczamy, żeby zachować kontekst rozmowy.
     const raw = items
@@ -73,14 +80,18 @@ export default function Home() {
     }
     // Rozmowa wysyłana do AI musi zaczynać się od użytkownika
     while (history.length && history[0].role === "assistant") history.shift();
-    const newItems: ChatItem[] = [...items, { role: "user", content: message }];
+    const shown = img ? message + `  📎 ${img.name}` : message;
+    const newItems: ChatItem[] = [...items, { role: "user", content: shown }];
     setItems(newItems);
     setLoading(true);
     try {
       const res = await fetch("/api/parse", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: [...history, { role: "user", content: message }] }),
+        body: JSON.stringify({
+          messages: [...history, { role: "user", content: message }],
+          image: img ? { mime: img.mime, data: img.data } : undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -124,7 +135,29 @@ export default function Home() {
     }
   }
 
-  function startVoice() {
+  function beep(freq: number) {
+    try {
+      const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      const ctx = new Ctx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.frequency.value = freq;
+      g.gain.value = 0.08;
+      o.start();
+      setTimeout(() => {
+        o.stop();
+        ctx.close();
+      }, 130);
+    } catch {}
+  }
+
+  function toggleVoice() {
+    if (listening) {
+      recRef.current?.stop();
+      return;
+    }
     const SR: any = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SR) {
       alert("Twoja przeglądarka nie obsługuje dyktowania. Użyj Chrome.");
@@ -132,12 +165,42 @@ export default function Home() {
     }
     const rec = new SR();
     rec.lang = "pl-PL";
-    rec.interimResults = false;
-    rec.onresult = (e: any) => {
-      const text = e.results[0][0].transcript;
-      setInput((prev) => (prev ? prev + " " : "") + text);
+    rec.interimResults = true;
+    rec.continuous = true;
+    let finalText = "";
+    rec.onstart = () => {
+      setListening(true);
+      beep(660);
     };
+    rec.onresult = (e: any) => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalText += t + " ";
+        else interim += t;
+      }
+      setInput((finalText + interim).trim());
+    };
+    rec.onerror = () => setListening(false);
+    rec.onend = () => {
+      setListening(false);
+      beep(440);
+    };
+    recRef.current = rec;
     rec.start();
+  }
+
+  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const res = String(reader.result || "");
+      const data = res.includes(",") ? res.split(",")[1] : res;
+      setAttach({ name: f.name, mime: f.type || "image/png", data });
+    };
+    reader.readAsDataURL(f);
+    e.target.value = "";
   }
 
   function onKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -212,18 +275,38 @@ export default function Home() {
       </div>
 
       <div className="composer">
+        {attach && (
+          <div className="attach-chip">
+            📎 {attach.name}
+            <button onClick={() => setAttach(null)} title="Usuń załącznik">✕</button>
+          </div>
+        )}
         <div className="composer-inner">
-          <button className="mic" onClick={startVoice} title="Dyktuj głosem">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*,application/pdf,.txt"
+            style={{ display: "none" }}
+            onChange={onPickFile}
+          />
+          <button className="mic" onClick={() => fileRef.current?.click()} title="Dodaj plik / zrzut ekranu">
+            📎
+          </button>
+          <button
+            className={"mic" + (listening ? " listening" : "")}
+            onClick={toggleVoice}
+            title={listening ? "Słucham — kliknij, aby zatrzymać" : "Dyktuj głosem"}
+          >
             🎤
           </button>
           <textarea
             rows={1}
-            placeholder="Np. „Jutro zadzwonić do studia, w piątek deadline na mix…”"
+            placeholder="Np. „Jutro o 15 gadam z Leną o koncercie…”"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKey}
           />
-          <button className="send" onClick={() => send()} disabled={loading || !input.trim()}>
+          <button className="send" onClick={() => send()} disabled={loading || (!input.trim() && !attach)}>
             ↑
           </button>
         </div>
