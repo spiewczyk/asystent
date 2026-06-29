@@ -36,21 +36,35 @@ interface Data {
 }
 
 type Kind = "zadanie" | "rutyna" | "projekt";
+const PRIO_ORDER = ["Wysoki", "Średni", "Niski", ""];
 
 function addDays(iso: string, n: number) {
   const d = new Date((iso || new Date().toISOString().slice(0, 10)) + "T00:00:00");
   d.setDate(d.getDate() + n);
   return d.toISOString().slice(0, 10);
 }
+function d2(iso?: string) {
+  if (!iso) return "";
+  const p = iso.slice(0, 10).split("-");
+  return p[2] + "." + p[1];
+}
 function fmtTermin(it: Item) {
   if (!it.termin) return "";
-  const s = it.termin.slice(0, 10);
-  const e = it.terminEnd ? it.terminEnd.slice(0, 10) : "";
-  return e && e !== s ? `${s}–${e}` : s;
+  const s = d2(it.termin);
+  const e = it.terminEnd && it.terminEnd.slice(0, 10) !== it.termin.slice(0, 10) ? d2(it.terminEnd) : "";
+  return e ? `${s}–${e}` : s;
+}
+function prioRank(p?: string) {
+  return p === "Wysoki" ? 0 : p === "Średni" ? 1 : p === "Niski" ? 2 : 3;
 }
 function prioDot(p?: string) {
   const color = p === "Wysoki" ? "#eb5757" : p === "Średni" ? "#e9a23b" : "#9b9a97";
   return <span className="dot" style={{ background: color }} />;
+}
+function sortItems(arr: Item[]) {
+  return [...arr].sort(
+    (a, b) => prioRank(a.priorytet) - prioRank(b.priorytet) || (a.termin || "9999").localeCompare(b.termin || "9999")
+  );
 }
 
 function ItemRow({
@@ -58,19 +72,28 @@ function ItemRow({
   kind,
   today,
   onDone,
-  onResched,
+  onUpdate,
   busy,
 }: {
   it: Item;
   kind: Kind;
   today: string;
   onDone: (it: Item, kind: Kind) => void;
-  onResched: (it: Item, date: string) => void;
+  onUpdate: (it: Item, patch: { date?: string; priorytet?: string }) => void;
   busy: boolean;
 }) {
+  const [editDate, setEditDate] = useState(false);
   const canCheck = kind === "zadanie" || kind === "rutyna";
+  const canEdit = kind === "zadanie" || kind === "projekt";
+
+  function cyclePrio() {
+    const idx = PRIO_ORDER.indexOf(it.priorytet || "");
+    const next = PRIO_ORDER[(idx + 1) % PRIO_ORDER.length];
+    onUpdate(it, { priorytet: next });
+  }
+
   return (
-    <div className="it">
+    <div className="it2">
       {canCheck ? (
         <button
           className="check"
@@ -81,24 +104,57 @@ function ItemRow({
           {busy ? "…" : "○"}
         </button>
       ) : (
-        prioDot(it.priorytet)
+        <span className="check-spacer">{prioDot(it.priorytet)}</span>
       )}
-      <a className="it-name" href={it.url} target="_blank" rel="noreferrer">
-        {it.name}
-      </a>
-      {it.obszar && <span className="it-tag obszar">{it.obszar}</span>}
-      {it.termin && <span className="it-date">{fmtTermin(it)}</span>}
-      {it.czestotliwosc && <span className="it-tag">{it.czestotliwosc}</span>}
-      {kind === "zadanie" && it.id && (
-        <span className="resched">
-          <button onClick={() => onResched(it, addDays(today, 1))} title="Przełóż na jutro">
-            jutro
-          </button>
-          <button onClick={() => onResched(it, addDays(it.termin || today, 7))} title="+7 dni">
-            +7
-          </button>
-        </span>
-      )}
+
+      <div className="it2-body">
+        <a className="it2-name" href={it.url} target="_blank" rel="noreferrer">
+          {it.name}
+        </a>
+        <div className="it2-meta">
+          {canEdit && (
+            <button className="prio-chip" onClick={() => cyclePrio()} title="Zmień priorytet" disabled={busy}>
+              {prioDot(it.priorytet)}
+              {it.priorytet || "priorytet"}
+            </button>
+          )}
+          {it.obszar && <span className="it-tag obszar">{it.obszar}</span>}
+          {it.czestotliwosc && <span className="it-tag">{it.czestotliwosc}</span>}
+
+          {editDate ? (
+            <input
+              className="date-input"
+              type="date"
+              autoFocus
+              defaultValue={it.termin ? it.termin.slice(0, 10) : today}
+              onChange={(e) => {
+                if (e.target.value) onUpdate(it, { date: e.target.value });
+                setEditDate(false);
+              }}
+              onBlur={() => setEditDate(false)}
+            />
+          ) : (
+            <button
+              className={"date-btn" + (it.termin ? "" : " empty")}
+              onClick={() => canEdit && setEditDate(true)}
+              title={canEdit ? "Kliknij, aby zmienić datę" : ""}
+            >
+              {it.termin ? fmtTermin(it) : canEdit ? "+ termin" : ""}
+            </button>
+          )}
+
+          {canEdit && (
+            <>
+              <button className="mini" onClick={() => onUpdate(it, { date: addDays(today, 1) })} disabled={busy}>
+                jutro
+              </button>
+              <button className="mini" onClick={() => onUpdate(it, { date: addDays(it.termin || today, 7) })} disabled={busy}>
+                +7
+              </button>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -110,10 +166,10 @@ function Section(props: {
   kind: Kind;
   today: string;
   onDone: (it: Item, kind: Kind) => void;
-  onResched: (it: Item, date: string) => void;
+  onUpdate: (it: Item, patch: { date?: string; priorytet?: string }) => void;
   busyId: string;
 }) {
-  const { title, items, accent, kind, today, onDone, onResched, busyId } = props;
+  const { title, items, accent, kind, today, onDone, onUpdate, busyId } = props;
   if (!items || items.length === 0) return null;
   return (
     <div className="sec">
@@ -123,12 +179,12 @@ function Section(props: {
       <div className="sec-list">
         {items.map((it, i) => (
           <ItemRow
-            key={i}
+            key={it.id || i}
             it={it}
             kind={kind}
             today={today}
             onDone={onDone}
-            onResched={onResched}
+            onUpdate={onUpdate}
             busy={busyId === it.id}
           />
         ))}
@@ -146,10 +202,7 @@ function Workload({ wd }: { wd: WD[] }) {
         {wd.map((d, i) => (
           <div className="wl-col" key={d.date} title={`${d.label}: ${d.count}`}>
             <div className="wl-n">{d.count || ""}</div>
-            <div
-              className={"wl-bar" + (i === 0 ? " is-today" : "")}
-              style={{ height: 6 + (d.count / max) * 44 }}
-            />
+            <div className={"wl-bar" + (i === 0 ? " is-today" : "")} style={{ height: 6 + (d.count / max) * 44 }} />
             <div className="wl-l">{d.label}</div>
           </div>
         ))}
@@ -198,14 +251,14 @@ export default function Dashboard() {
     setBusyId("");
   }
 
-  async function onResched(it: Item, date: string) {
+  async function onUpdate(it: Item, patch: { date?: string; priorytet?: string }) {
     if (!it.id) return;
     setBusyId(it.id);
     try {
-      await fetch("/api/schedule", {
+      await fetch("/api/update", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id: it.id, date }),
+        body: JSON.stringify({ id: it.id, ...patch }),
       });
       await load();
     } catch {}
@@ -220,10 +273,7 @@ export default function Dashboard() {
       await fetch("/api/commit", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          target: "zadania",
-          fields: { Nazwa: name, Status: "Do zrobienia" },
-        }),
+        body: JSON.stringify({ target: "zadania", fields: { Nazwa: name, Status: "Do zrobienia" } }),
       });
       setQuick("");
       await load();
@@ -261,21 +311,26 @@ export default function Dashboard() {
     return Array.from(s).sort();
   }, [data]);
 
-  const fil = (arr: Item[]) => (cat ? arr.filter((i) => i.obszar === cat) : arr);
+  const fil = (arr: Item[]) => sortItems(cat ? arr.filter((i) => i.obszar === cat) : arr);
 
   const projektyUpcoming = data
     ? fil(data.projekty.overdue.concat(data.projekty.today, data.projekty.week))
     : [];
 
-  // "Teraz najważniejsze" — najwyższy priorytet wśród zaległych/dziś, potem najwcześniejszy termin
-  const topItem = useMemo(() => {
+  // "Teraz najważniejsze" + powód
+  const top = useMemo(() => {
     if (!data) return null;
-    const pool = fil(data.zadania.overdue.concat(data.zadania.today));
+    const overdue = fil(data.zadania.overdue);
+    const todayArr = fil(data.zadania.today);
+    const pool = overdue.concat(todayArr);
     if (pool.length === 0) return null;
-    const rank = (p?: string) => (p === "Wysoki" ? 0 : p === "Średni" ? 1 : 2);
-    return [...pool].sort(
-      (a, b) => rank(a.priorytet) - rank(b.priorytet) || (a.termin || "9999").localeCompare(b.termin || "9999")
-    )[0];
+    const it = pool[0]; // już posortowane wg priorytetu/daty
+    const isOverdue = overdue.includes(it);
+    const reasons: string[] = [];
+    if (isOverdue) reasons.push("po terminie");
+    else reasons.push("na dziś");
+    if (it.priorytet) reasons.push("priorytet: " + it.priorytet.toLowerCase());
+    return { it, reason: reasons.join(" · ") };
   }, [data, cat]);
 
   const prog = data?.todayStats;
@@ -295,7 +350,6 @@ export default function Dashboard() {
 
       {data && (
         <>
-          {/* szybkie dodawanie */}
           <div className="quick">
             <input
               value={quick}
@@ -310,7 +364,6 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* postęp dnia */}
           {prog && prog.total > 0 && (
             <div className="prog">
               <div className="prog-h">
@@ -344,10 +397,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* wykres obciążenia */}
           {data.workload && <Workload wd={data.workload} />}
 
-          {/* sugestie */}
           <button className="sug-btn" onClick={getSuggestions} disabled={sugLoading}>
             {sugLoading ? "Myślę…" : "💡 Sugestie"}
           </button>
@@ -361,44 +412,38 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* filtr kategorii */}
           {allCats.length > 0 && (
             <div className="cats">
               <button className={"cat" + (cat === "" ? " on" : "")} onClick={() => setCat("")}>
                 Wszystko
               </button>
               {allCats.map((c) => (
-                <button
-                  key={c}
-                  className={"cat" + (cat === c ? " on" : "")}
-                  onClick={() => setCat(cat === c ? "" : c)}
-                >
+                <button key={c} className={"cat" + (cat === c ? " on" : "")} onClick={() => setCat(cat === c ? "" : c)}>
                   {c}
                 </button>
               ))}
             </div>
           )}
 
-          {/* teraz najważniejsze */}
-          {topItem && (
+          {top && (
             <div className="topnow">
-              <div className="topnow-l">⭐ Teraz najważniejsze</div>
+              <div className="topnow-l">⭐ Teraz najważniejsze · {top.reason}</div>
               <div className="topnow-name">
-                {prioDot(topItem.priorytet)}
-                <a href={topItem.url} target="_blank" rel="noreferrer">
-                  {topItem.name}
+                {prioDot(top.it.priorytet)}
+                <a href={top.it.url} target="_blank" rel="noreferrer">
+                  {top.it.name}
                 </a>
-                {topItem.termin && <span className="it-date">{fmtTermin(topItem)}</span>}
+                {top.it.termin && <span className="it-date">{fmtTermin(top.it)}</span>}
               </div>
             </div>
           )}
 
-          <Section title="🔴 Zaległe" items={fil(data.zadania.overdue)} accent="#eb5757" kind="zadanie" today={data.today} onDone={onDone} onResched={onResched} busyId={busyId} />
-          <Section title="📌 Na dziś" items={fil(data.zadania.today)} accent="#2383e2" kind="zadanie" today={data.today} onDone={onDone} onResched={onResched} busyId={busyId} />
-          <Section title="🔁 Rutyny" items={fil(data.rutynyDue)} kind="rutyna" today={data.today} onDone={onDone} onResched={onResched} busyId={busyId} />
-          <Section title="🗓️ Ten tydzień" items={fil(data.zadania.week)} kind="zadanie" today={data.today} onDone={onDone} onResched={onResched} busyId={busyId} />
-          <Section title="🗒️ Bez terminu" items={fil(data.zadania.noDate)} kind="zadanie" today={data.today} onDone={onDone} onResched={onResched} busyId={busyId} />
-          <Section title="🚀 Projekty — najbliższe" items={projektyUpcoming} accent="#9256d9" kind="projekt" today={data.today} onDone={onDone} onResched={onResched} busyId={busyId} />
+          <Section title="🔴 Zaległe" items={fil(data.zadania.overdue)} accent="#eb5757" kind="zadanie" today={data.today} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
+          <Section title="📌 Na dziś" items={fil(data.zadania.today)} accent="#2383e2" kind="zadanie" today={data.today} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
+          <Section title="🔁 Rutyny" items={fil(data.rutynyDue)} kind="rutyna" today={data.today} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
+          <Section title="🗓️ Ten tydzień" items={fil(data.zadania.week)} kind="zadanie" today={data.today} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
+          <Section title="🗒️ Bez terminu" items={fil(data.zadania.noDate)} kind="zadanie" today={data.today} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
+          <Section title="🚀 Projekty — najbliższe" items={projektyUpcoming} accent="#9256d9" kind="projekt" today={data.today} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
 
           {data.counts.zalegle + data.counts.dzis + data.counts.tydzien + data.counts.rutyny === 0 && (
             <div className="dash-clear">Czysto na najbliższe dni 🎉</div>

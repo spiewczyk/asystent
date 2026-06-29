@@ -497,6 +497,97 @@ button {
   color: #8a5cd1;
 }
 
+/* dwuliniowy wiersz pozycji */
+.it2 {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+.it2:hover {
+  background: var(--hover);
+}
+.check-spacer {
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+.it2 .check {
+  margin-top: 1px;
+}
+.it2-body {
+  flex: 1;
+  min-width: 0;
+}
+.it2-name {
+  display: block;
+  font-size: 14px;
+  color: var(--text);
+  text-decoration: none;
+  line-height: 1.35;
+  word-break: break-word;
+}
+.it2-name:hover {
+  text-decoration: underline;
+}
+.it2-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+}
+.prio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--block);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--text-light);
+}
+.prio-chip:hover {
+  background: var(--hover);
+}
+.date-btn {
+  background: var(--block);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2px 9px;
+  font-size: 11px;
+  color: var(--text);
+}
+.date-btn.empty {
+  color: var(--text-light);
+  border-style: dashed;
+}
+.date-btn:hover {
+  background: var(--hover);
+}
+.date-input {
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-family: var(--font);
+}
+.mini {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--text-light);
+}
+.mini:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
 /* szybkie dodawanie */
 .quick {
   display: flex;
