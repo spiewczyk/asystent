@@ -19,11 +19,7 @@ interface Buckets {
   later: Item[];
   noDate: Item[];
 }
-interface WD {
-  date: string;
-  label: string;
-  count: number;
-}
+interface WD { date: string; label: string; count: number }
 interface Data {
   today: string;
   zadania: Buckets;
@@ -34,9 +30,15 @@ interface Data {
   workload: WD[];
   todayStats: { done: number; total: number };
 }
+interface Opt { id: string; name: string }
+interface Options { obszary: Opt[]; projekty: Opt[] }
 
 type Kind = "zadanie" | "rutyna" | "projekt";
 const PRIO_ORDER = ["Wysoki", "Średni", "Niski", ""];
+const STATUSY: Record<string, string[]> = {
+  zadanie: ["Do zrobienia", "W toku", "Oczekuje", "Zrobione"],
+  projekt: ["Pomysł", "Planowany", "W toku", "Wstrzymany", "Ukończony", "Archiwum"],
+};
 
 function addDays(iso: string, n: number) {
   const d = new Date((iso || new Date().toISOString().slice(0, 10)) + "T00:00:00");
@@ -48,18 +50,25 @@ function d2(iso?: string) {
   const p = iso.slice(0, 10).split("-");
   return p[2] + "." + p[1];
 }
+function timeOf(it: Item) {
+  const m = (it.termin || "").match(/T(\d{2}:\d{2})/);
+  return m ? m[1] : "";
+}
 function fmtTermin(it: Item) {
   if (!it.termin) return "";
   const s = d2(it.termin);
   const e = it.terminEnd && it.terminEnd.slice(0, 10) !== it.termin.slice(0, 10) ? d2(it.terminEnd) : "";
-  return e ? `${s}–${e}` : s;
+  const t = timeOf(it);
+  return (e ? `${s}–${e}` : s) + (t ? ` ${t}` : "");
 }
 function prioRank(p?: string) {
   return p === "Wysoki" ? 0 : p === "Średni" ? 1 : p === "Niski" ? 2 : 3;
 }
+function prioColor(p?: string) {
+  return p === "Wysoki" ? "#eb5757" : p === "Średni" ? "#e9a23b" : "#9b9a97";
+}
 function prioDot(p?: string) {
-  const color = p === "Wysoki" ? "#eb5757" : p === "Średni" ? "#e9a23b" : "#9b9a97";
-  return <span className="dot" style={{ background: color }} />;
+  return <span className="dot" style={{ background: prioColor(p) }} />;
 }
 function sortItems(arr: Item[]) {
   return [...arr].sort(
@@ -67,10 +76,122 @@ function sortItems(arr: Item[]) {
   );
 }
 
+/* ---------- Edytor właściwości ---------- */
+function ItemEditor({
+  item,
+  kind,
+  options,
+  onClose,
+  onSaved,
+}: {
+  item: Item;
+  kind: Kind;
+  options: Options;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/item?id=" + item.id)
+      .then((r) => r.json())
+      .then((d) => setForm(d))
+      .catch(() => setForm({}));
+  }, [item.id]);
+
+  function set(k: string, v: any) {
+    setForm((f: any) => ({ ...f, [k]: v }));
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      await fetch("/api/update", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: item.id,
+          status: form.status,
+          priorytet: form.priorytet ?? "",
+          date: form.date ?? "",
+          notatki: form.notatki ?? "",
+          obszarId: form.obszarId ?? "",
+          projektId: kind === "zadanie" ? form.projektId ?? "" : undefined,
+        }),
+      });
+      onSaved();
+    } catch {}
+    setSaving(false);
+  }
+
+  if (!form) return <div className="editor">Ładuję…</div>;
+  const statusy = STATUSY[kind] || [];
+
+  return (
+    <div className="editor">
+      <div className="ed-row">
+        <label>Status</label>
+        <select value={form.status || ""} onChange={(e) => set("status", e.target.value)}>
+          <option value="">—</option>
+          {statusy.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+      </div>
+      <div className="ed-row">
+        <label>Priorytet</label>
+        <select value={form.priorytet || ""} onChange={(e) => set("priorytet", e.target.value)}>
+          <option value="">—</option>
+          {["Wysoki", "Średni", "Niski"].map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+      </div>
+      <div className="ed-row">
+        <label>Termin</label>
+        <input type="date" value={(form.date || "").slice(0, 10)} onChange={(e) => set("date", e.target.value)} />
+      </div>
+      <div className="ed-row">
+        <label>Obszar</label>
+        <select value={form.obszarId || ""} onChange={(e) => set("obszarId", e.target.value)}>
+          <option value="">—</option>
+          {options.obszary.map((o) => (
+            <option key={o.id} value={o.id}>{o.name}</option>
+          ))}
+        </select>
+      </div>
+      {kind === "zadanie" && (
+        <div className="ed-row">
+          <label>Projekt</label>
+          <select value={form.projektId || ""} onChange={(e) => set("projektId", e.target.value)}>
+            <option value="">—</option>
+            {options.projekty.map((o) => (
+              <option key={o.id} value={o.id}>{o.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+      <div className="ed-row">
+        <label>Notatki</label>
+        <textarea value={form.notatki || ""} onChange={(e) => set("notatki", e.target.value)} />
+      </div>
+      <div className="ed-actions">
+        <button className="btn primary" onClick={save} disabled={saving}>
+          {saving ? "Zapisuję…" : "Zapisz"}
+        </button>
+        <button className="btn" onClick={onClose}>Anuluj</button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Wiersz pozycji ---------- */
 function ItemRow({
   it,
   kind,
   today,
+  options,
   onDone,
   onUpdate,
   busy,
@@ -78,98 +199,76 @@ function ItemRow({
   it: Item;
   kind: Kind;
   today: string;
+  options: Options;
   onDone: (it: Item, kind: Kind) => void;
-  onUpdate: (it: Item, patch: { date?: string; priorytet?: string }) => void;
+  onUpdate: (it: Item, patch: any) => void;
   busy: boolean;
 }) {
-  const [editDate, setEditDate] = useState(false);
+  const [open, setOpen] = useState(false);
   const canCheck = kind === "zadanie" || kind === "rutyna";
   const canEdit = kind === "zadanie" || kind === "projekt";
 
-  function cyclePrio() {
-    const idx = PRIO_ORDER.indexOf(it.priorytet || "");
-    const next = PRIO_ORDER[(idx + 1) % PRIO_ORDER.length];
-    onUpdate(it, { priorytet: next });
-  }
-
   return (
-    <div className="it2">
-      {canCheck ? (
-        <button
-          className="check"
-          onClick={() => onDone(it, kind)}
-          disabled={busy}
-          title={kind === "rutyna" ? "Zrobione — przesuń termin" : "Odhacz"}
-        >
-          {busy ? "…" : "○"}
-        </button>
-      ) : (
-        <span className="check-spacer">{prioDot(it.priorytet)}</span>
-      )}
+    <div className="it2-wrap">
+      <div className="it2">
+        {canCheck ? (
+          <button
+            className={"check" + (busy ? " on" : "")}
+            onClick={() => onDone(it, kind)}
+            disabled={busy}
+            title={kind === "rutyna" ? "Zrobione — przesuń termin" : "Odhacz"}
+          >
+            {busy ? "✓" : ""}
+          </button>
+        ) : (
+          <span className="check-spacer">{prioDot(it.priorytet)}</span>
+        )}
 
-      <div className="it2-body">
-        <a className="it2-name" href={it.url} target="_blank" rel="noreferrer">
-          {it.name}
-        </a>
-        <div className="it2-meta">
-          {canEdit && (
-            <button className="prio-chip" onClick={() => cyclePrio()} title="Zmień priorytet" disabled={busy}>
-              {prioDot(it.priorytet)}
-              {it.priorytet || "priorytet"}
-            </button>
-          )}
-          {it.obszar && <span className="it-tag obszar">{it.obszar}</span>}
-          {it.czestotliwosc && <span className="it-tag">{it.czestotliwosc}</span>}
-
-          {editDate ? (
-            <input
-              className="date-input"
-              type="date"
-              autoFocus
-              defaultValue={it.termin ? it.termin.slice(0, 10) : today}
-              onChange={(e) => {
-                if (e.target.value) onUpdate(it, { date: e.target.value });
-                setEditDate(false);
-              }}
-              onBlur={() => setEditDate(false)}
-            />
-          ) : (
-            <button
-              className={"date-btn" + (it.termin ? "" : " empty")}
-              onClick={() => canEdit && setEditDate(true)}
-              title={canEdit ? "Kliknij, aby zmienić datę" : ""}
-            >
-              {it.termin ? fmtTermin(it) : canEdit ? "+ termin" : ""}
-            </button>
-          )}
-
-          {canEdit && (
-            <>
+        <div className="it2-body">
+          <a className="it2-name" href={it.url} target="_blank" rel="noreferrer">
+            {it.name}
+          </a>
+          <div className="it2-meta">
+            {it.priorytet && (
+              <span className="prio-chip">
+                {prioDot(it.priorytet)}
+                {it.priorytet}
+              </span>
+            )}
+            {it.obszar && <span className="it-tag obszar">{it.obszar}</span>}
+            {it.czestotliwosc && <span className="it-tag">{it.czestotliwosc}</span>}
+            {it.termin && <span className="date-pill">{fmtTermin(it)}</span>}
+            {canEdit && (
               <button className="mini" onClick={() => onUpdate(it, { date: addDays(today, 1) })} disabled={busy}>
                 jutro
               </button>
-              <button className="mini" onClick={() => onUpdate(it, { date: addDays(it.termin || today, 7) })} disabled={busy}>
-                +7
+            )}
+            {canEdit && (
+              <button className="mini ed-btn" onClick={() => setOpen((o) => !o)}>
+                ✎ edytuj
               </button>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
+      {open && canEdit && (
+        <ItemEditor
+          item={it}
+          kind={kind}
+          options={options}
+          onClose={() => setOpen(false)}
+          onSaved={() => {
+            setOpen(false);
+            onUpdate(it, {});
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function Section(props: {
-  title: string;
-  items: Item[];
-  accent?: string;
-  kind: Kind;
-  today: string;
-  onDone: (it: Item, kind: Kind) => void;
-  onUpdate: (it: Item, patch: { date?: string; priorytet?: string }) => void;
-  busyId: string;
-}) {
-  const { title, items, accent, kind, today, onDone, onUpdate, busyId } = props;
+function Section(props: any) {
+  const { title, items, accent, kind, today, options, onDone, onUpdate, busyId } = props;
   if (!items || items.length === 0) return null;
   return (
     <div className="sec">
@@ -177,12 +276,13 @@ function Section(props: {
         {title} <span className="sec-count">{items.length}</span>
       </div>
       <div className="sec-list">
-        {items.map((it, i) => (
+        {items.map((it: Item, i: number) => (
           <ItemRow
             key={it.id || i}
             it={it}
             kind={kind}
             today={today}
+            options={options}
             onDone={onDone}
             onUpdate={onUpdate}
             busy={busyId === it.id}
@@ -211,20 +311,76 @@ function Workload({ wd }: { wd: WD[] }) {
   );
 }
 
+/* ---------- Plan na dziś (oś czasu) ---------- */
+function PlanToday({ data, onBack }: { data: Data; onBack: () => void }) {
+  const todayTasks = data.zadania.today;
+  const todayRoutines = data.rutynyDue.filter((r) => r.termin && r.termin.slice(0, 10) === data.today);
+  const all = todayTasks.concat(todayRoutines);
+  const timed = all.filter((e) => timeOf(e)).sort((a, b) => timeOf(a).localeCompare(timeOf(b)));
+  const untimed = sortItems(all.filter((e) => !timeOf(e)));
+  const overdue = sortItems(data.zadania.overdue);
+
+  return (
+    <div className="plan">
+      <div className="plan-head">
+        <div>
+          <div className="plan-title">📅 Plan na dziś</div>
+          <div className="plan-sub">{data.today} · {all.length} rzeczy</div>
+        </div>
+        <button className="navlink" onClick={onBack}>← wróć</button>
+      </div>
+
+      {overdue.length > 0 && (
+        <div className="plan-overdue">
+          ⚠️ {overdue.length} zaległych — najpilniejsze: <b>{overdue[0].name}</b>
+        </div>
+      )}
+
+      {timed.length > 0 && (
+        <div className="timeline">
+          {timed.map((e, i) => (
+            <a className="tl-ev" key={i} href={e.url} target="_blank" rel="noreferrer">
+              <div className="tl-time">{timeOf(e)}</div>
+              <div className="tl-dot" style={{ background: prioColor(e.priorytet) }} />
+              <div className="tl-name">{e.name}</div>
+            </a>
+          ))}
+        </div>
+      )}
+
+      {untimed.length > 0 && (
+        <div className="plan-block">
+          <div className="plan-block-h">O dowolnej porze</div>
+          {untimed.map((e, i) => (
+            <a className="tl-ev flat" key={i} href={e.url} target="_blank" rel="noreferrer">
+              <div className="tl-dot" style={{ background: prioColor(e.priorytet) }} />
+              <div className="tl-name">{e.name}</div>
+            </a>
+          ))}
+        </div>
+      )}
+
+      {all.length === 0 && <div className="dash-clear">Na dziś nic nie zaplanowane 🎉</div>}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [data, setData] = useState<Data | null>(null);
+  const [options, setOptions] = useState<Options>({ obszary: [], projekty: [] });
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
+  const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [cat, setCat] = useState("");
-  const [quick, setQuick] = useState("");
-  const [adding, setAdding] = useState(false);
+  const [plan, setPlan] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [sugLoading, setSugLoading] = useState(false);
 
   async function load() {
     setLoading(true);
     setErr("");
+    setRemoved(new Set());
     try {
       const r = await fetch("/api/dashboard");
       const d = await r.json();
@@ -237,9 +393,20 @@ export default function Dashboard() {
     }
   }
 
+  useEffect(() => {
+    load();
+    fetch("/api/options")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.obszary) setOptions({ obszary: d.obszary, projekty: d.projekty });
+      })
+      .catch(() => {});
+  }, []);
+
   async function onDone(it: Item, kind: Kind) {
     if (!it.id) return;
     setBusyId(it.id);
+    setRemoved((s) => new Set(s).add(it.id!)); // od razu znika
     try {
       await fetch("/api/done", {
         method: "POST",
@@ -251,34 +418,20 @@ export default function Dashboard() {
     setBusyId("");
   }
 
-  async function onUpdate(it: Item, patch: { date?: string; priorytet?: string }) {
+  async function onUpdate(it: Item, patch: any) {
     if (!it.id) return;
-    setBusyId(it.id);
-    try {
-      await fetch("/api/update", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ id: it.id, ...patch }),
-      });
-      await load();
-    } catch {}
-    setBusyId("");
-  }
-
-  async function quickAdd() {
-    const name = quick.trim();
-    if (!name) return;
-    setAdding(true);
-    try {
-      await fetch("/api/commit", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ target: "zadania", fields: { Nazwa: name, Status: "Do zrobienia" } }),
-      });
-      setQuick("");
-      await load();
-    } catch {}
-    setAdding(false);
+    if (patch && Object.keys(patch).length) {
+      setBusyId(it.id);
+      try {
+        await fetch("/api/update", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ id: it.id, ...patch }),
+        });
+      } catch {}
+      setBusyId("");
+    }
+    await load();
   }
 
   async function getSuggestions() {
@@ -293,10 +446,6 @@ export default function Dashboard() {
     setSugLoading(false);
   }
 
-  useEffect(() => {
-    load();
-  }, []);
-
   const allCats = useMemo(() => {
     if (!data) return [];
     const s = new Set<string>();
@@ -304,34 +453,27 @@ export default function Dashboard() {
     add(data.zadania.overdue);
     add(data.zadania.today);
     add(data.zadania.week);
-    add(data.zadania.later);
     add(data.zadania.noDate);
     add(data.rutynyDue);
     add(data.projektyActive);
     return Array.from(s).sort();
   }, [data]);
 
-  const fil = (arr: Item[]) => sortItems(cat ? arr.filter((i) => i.obszar === cat) : arr);
+  const fil = (arr: Item[]) =>
+    sortItems((cat ? arr.filter((i) => i.obszar === cat) : arr).filter((i) => !i.id || !removed.has(i.id)));
 
-  const projektyUpcoming = data
-    ? fil(data.projekty.overdue.concat(data.projekty.today, data.projekty.week))
-    : [];
+  const projektyUpcoming = data ? fil(data.projekty.overdue.concat(data.projekty.today, data.projekty.week)) : [];
 
-  // "Teraz najważniejsze" + powód
   const top = useMemo(() => {
     if (!data) return null;
     const overdue = fil(data.zadania.overdue);
-    const todayArr = fil(data.zadania.today);
-    const pool = overdue.concat(todayArr);
+    const pool = overdue.concat(fil(data.zadania.today));
     if (pool.length === 0) return null;
-    const it = pool[0]; // już posortowane wg priorytetu/daty
-    const isOverdue = overdue.includes(it);
-    const reasons: string[] = [];
-    if (isOverdue) reasons.push("po terminie");
-    else reasons.push("na dziś");
+    const it = pool[0];
+    const reasons: string[] = [overdue.includes(it) ? "po terminie" : "na dziś"];
     if (it.priorytet) reasons.push("priorytet: " + it.priorytet.toLowerCase());
     return { it, reason: reasons.join(" · ") };
-  }, [data, cat]);
+  }, [data, cat, removed]);
 
   const prog = data?.todayStats;
   const progPct = prog && prog.total > 0 ? Math.round((prog.done / prog.total) * 100) : 0;
@@ -340,37 +482,28 @@ export default function Dashboard() {
     <div className="dash">
       <div className="dash-h">
         <span>🌅 Najważniejsze</span>
-        <button className="dash-refresh" onClick={load} title="Odśwież">
-          ↻
-        </button>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button className="dash-refresh" onClick={() => setPlan((p) => !p)} title="Plan na dziś">
+            📅
+          </button>
+          <button className="dash-refresh" onClick={load} title="Odśwież">
+            ↻
+          </button>
+        </div>
       </div>
 
       {loading && !data && <div className="dash-loading">Ładuję…</div>}
       {err && <div className="login-error">⚠️ {err}</div>}
 
-      {data && (
-        <>
-          <div className="quick">
-            <input
-              value={quick}
-              placeholder="+ szybkie zadanie"
-              onChange={(e) => setQuick(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") quickAdd();
-              }}
-            />
-            <button onClick={quickAdd} disabled={adding || !quick.trim()}>
-              {adding ? "…" : "Dodaj"}
-            </button>
-          </div>
+      {data && plan && <PlanToday data={data} onBack={() => setPlan(false)} />}
 
+      {data && !plan && (
+        <>
           {prog && prog.total > 0 && (
             <div className="prog">
               <div className="prog-h">
                 <span>Dziś zrobione</span>
-                <span>
-                  {prog.done}/{prog.total}
-                </span>
+                <span>{prog.done}/{prog.total}</span>
               </div>
               <div className="prog-bar">
                 <div className="prog-fill" style={{ width: progPct + "%" }} />
@@ -379,22 +512,10 @@ export default function Dashboard() {
           )}
 
           <div className="counts">
-            <div className="count">
-              <b>{data.counts.zalegle}</b>
-              <span>zaległe</span>
-            </div>
-            <div className="count">
-              <b>{data.counts.dzis}</b>
-              <span>na dziś</span>
-            </div>
-            <div className="count">
-              <b>{data.counts.tydzien}</b>
-              <span>tydzień</span>
-            </div>
-            <div className="count">
-              <b>{data.counts.rutyny}</b>
-              <span>rutyny</span>
-            </div>
+            <div className="count"><b>{data.counts.zalegle}</b><span>zaległe</span></div>
+            <div className="count"><b>{data.counts.dzis}</b><span>na dziś</span></div>
+            <div className="count"><b>{data.counts.tydzien}</b><span>tydzień</span></div>
+            <div className="count"><b>{data.counts.rutyny}</b><span>rutyny</span></div>
           </div>
 
           {data.workload && <Workload wd={data.workload} />}
@@ -405,22 +526,16 @@ export default function Dashboard() {
           {suggestions.length > 0 && (
             <div className="sug-box">
               {suggestions.map((s, i) => (
-                <div className="sug" key={i}>
-                  • {s}
-                </div>
+                <div className="sug" key={i}>• {s}</div>
               ))}
             </div>
           )}
 
           {allCats.length > 0 && (
             <div className="cats">
-              <button className={"cat" + (cat === "" ? " on" : "")} onClick={() => setCat("")}>
-                Wszystko
-              </button>
+              <button className={"cat" + (cat === "" ? " on" : "")} onClick={() => setCat("")}>Wszystko</button>
               {allCats.map((c) => (
-                <button key={c} className={"cat" + (cat === c ? " on" : "")} onClick={() => setCat(cat === c ? "" : c)}>
-                  {c}
-                </button>
+                <button key={c} className={"cat" + (cat === c ? " on" : "")} onClick={() => setCat(cat === c ? "" : c)}>{c}</button>
               ))}
             </div>
           )}
@@ -430,20 +545,18 @@ export default function Dashboard() {
               <div className="topnow-l">⭐ Teraz najważniejsze · {top.reason}</div>
               <div className="topnow-name">
                 {prioDot(top.it.priorytet)}
-                <a href={top.it.url} target="_blank" rel="noreferrer">
-                  {top.it.name}
-                </a>
+                <a href={top.it.url} target="_blank" rel="noreferrer">{top.it.name}</a>
                 {top.it.termin && <span className="it-date">{fmtTermin(top.it)}</span>}
               </div>
             </div>
           )}
 
-          <Section title="🔴 Zaległe" items={fil(data.zadania.overdue)} accent="#eb5757" kind="zadanie" today={data.today} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
-          <Section title="📌 Na dziś" items={fil(data.zadania.today)} accent="#2383e2" kind="zadanie" today={data.today} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
-          <Section title="🔁 Rutyny" items={fil(data.rutynyDue)} kind="rutyna" today={data.today} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
-          <Section title="🗓️ Ten tydzień" items={fil(data.zadania.week)} kind="zadanie" today={data.today} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
-          <Section title="🗒️ Bez terminu" items={fil(data.zadania.noDate)} kind="zadanie" today={data.today} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
-          <Section title="🚀 Projekty — najbliższe" items={projektyUpcoming} accent="#9256d9" kind="projekt" today={data.today} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
+          <Section title="🔴 Zaległe" items={fil(data.zadania.overdue)} accent="#eb5757" kind="zadanie" today={data.today} options={options} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
+          <Section title="📌 Na dziś" items={fil(data.zadania.today)} accent="#2383e2" kind="zadanie" today={data.today} options={options} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
+          <Section title="🔁 Rutyny" items={fil(data.rutynyDue)} kind="rutyna" today={data.today} options={options} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
+          <Section title="🗓️ Ten tydzień" items={fil(data.zadania.week)} kind="zadanie" today={data.today} options={options} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
+          <Section title="🗒️ Bez terminu" items={fil(data.zadania.noDate)} kind="zadanie" today={data.today} options={options} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
+          <Section title="🚀 Projekty — najbliższe" items={projektyUpcoming} accent="#9256d9" kind="projekt" today={data.today} options={options} onDone={onDone} onUpdate={onUpdate} busyId={busyId} />
 
           {data.counts.zalegle + data.counts.dzis + data.counts.tydzien + data.counts.rutyny === 0 && (
             <div className="dash-clear">Czysto na najbliższe dni 🎉</div>

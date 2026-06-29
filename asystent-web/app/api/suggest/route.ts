@@ -11,15 +11,32 @@ export async function POST() {
     const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
     const d = await buildDashboard();
-    const list = (arr: any[]) => arr.map((i) => i.name).join(", ") || "brak";
-    const summary = `Zaległe: ${list(d.zadania.overdue)}.
-Na dziś: ${list(d.zadania.today)}.
-Ten tydzień: ${list(d.zadania.week)}.
-Rutyny do zrobienia: ${list(d.rutynyDue)}.
-Projekty w toku: ${list(d.projektyActive)}.`;
+    const fmt = (arr: any[]) =>
+      arr.length
+        ? arr
+            .map((i) => {
+              const t = i.termin ? ` (${i.termin.slice(0, 10)}${i.priorytet ? ", " + i.priorytet : ""})` : "";
+              return `${i.name}${t}`;
+            })
+            .join("; ")
+        : "brak";
+
+    const peak = [...(d.workload || [])].sort((a, b) => b.count - a.count)[0];
+    const context = `Dzisiaj: ${d.today}.
+ZALEGŁE (${d.zadania.overdue.length}): ${fmt(d.zadania.overdue)}.
+NA DZIŚ (${d.zadania.today.length}): ${fmt(d.zadania.today)}.
+TEN TYDZIEŃ (${d.zadania.week.length}): ${fmt(d.zadania.week)}.
+BEZ TERMINU (${d.zadania.noDate.length}): ${fmt(d.zadania.noDate)}.
+RUTYNY DZIŚ/WKRÓTCE: ${fmt(d.rutynyDue)}.
+PROJEKTY W TOKU: ${fmt(d.projektyActive)}.
+Najbardziej obciążony dzień: ${peak ? peak.label + " (" + peak.count + ")" : "—"}.
+Zrobione dziś: ${d.todayStats.done}/${d.todayStats.total}.`;
 
     const system =
-      'Jesteś asystentem produktywności (system PARA). Na podstawie stanu zadań użytkownika podaj 3-4 krótkie, praktyczne sugestie po polsku: co zrobić teraz, co zaplanować, co połączyć, jaki jest logiczny następny krok (np. po miksie utworu — zaplanuj poprawki, potem wysyłkę do klienta). Każda sugestia max 12 słów, konkretna i wykonalna. Zwróć WYŁĄCZNIE JSON: {"suggestions":["...","..."]}';
+      'Jesteś osobistym asystentem produktywności. Na podstawie KONKRETNEGO, aktualnego stanu planu podaj 3-4 sugestie po polsku. ' +
+      "KAŻDA sugestia MUSI odnosić się do realnych pozycji z danych (po nazwie) lub konkretnych liczb/dat — żadnych ogólników typu 'ustal priorytety' czy 'zrób przerwę'. " +
+      "Przykłady dobrego stylu: 'Zacznij od X — jest 3 dni po terminie', 'Przenieś Y na czwartek, bo wtorek masz przeładowany', 'Po miksie Z zaplanuj poprawki'. " +
+      "Bądź konkretny i praktyczny. Zwróć WYŁĄCZNIE JSON: {\"suggestions\":[\"...\",\"...\"]}";
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const resp = await fetch(url, {
@@ -27,11 +44,11 @@ Projekty w toku: ${list(d.projektyActive)}.`;
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: system }] },
-        contents: [{ role: "user", parts: [{ text: summary }] }],
+        contents: [{ role: "user", parts: [{ text: context }] }],
         generationConfig: {
-          temperature: 0.5,
+          temperature: 0.7,
           responseMimeType: "application/json",
-          maxOutputTokens: 1024,
+          maxOutputTokens: 1200,
         },
       }),
     });
