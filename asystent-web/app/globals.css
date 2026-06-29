@@ -402,6 +402,71 @@ button {
   background: var(--bg);
 }
 
+/* odhaczanie */
+.check {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-light);
+  background: var(--bg);
+  color: var(--green);
+  font-size: 11px;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.check:hover {
+  border-color: var(--green);
+  background: var(--green-bg);
+}
+.check:disabled {
+  opacity: 0.5;
+}
+.it-name {
+  text-decoration: none;
+  color: var(--text);
+}
+.it-name:hover {
+  text-decoration: underline;
+}
+.it-tag.obszar {
+  background: #f0ebf9;
+  color: #8a5cd1;
+}
+
+/* sugestie */
+.sug-btn {
+  margin-top: 4px;
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px;
+  font-size: 13px;
+  color: var(--text);
+}
+.sug-btn:hover {
+  background: var(--hover);
+}
+.sug-btn:disabled {
+  opacity: 0.6;
+}
+.sug-box {
+  margin-top: 8px;
+  background: #fff8e8;
+  border: 1px solid #f3e2b3;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.sug {
+  font-size: 13px;
+  color: #7a5b00;
+  padding: 3px 0;
+}
+
 /* ---------- Nav / Panel ---------- */
 .nav {
   display: flex;

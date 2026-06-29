@@ -1,4 +1,4 @@
-import { notion } from "./notion";
+import { notion, getAllOptions } from "./notion";
 import { DATABASES } from "./schema";
 
 // --- pomocnicze odczyty właściwości ---
@@ -35,13 +35,20 @@ async function queryAll(databaseId: string): Promise<any[]> {
 }
 
 export interface Item {
+  id?: string;
   name: string;
   priorytet?: string;
   status?: string;
   termin?: string;
   terminEnd?: string;
   czestotliwosc?: string;
+  obszar?: string;
   url?: string;
+}
+
+function relationName(page: any, name: string, map: Record<string, string>): string {
+  const id = page.properties?.[name]?.relation?.[0]?.id;
+  return id ? map[id] || "" : "";
 }
 
 type Buckets = {
@@ -72,6 +79,15 @@ export async function buildDashboard() {
     return "later";
   }
 
+  // Mapa Obszarów (id → nazwa) do pokazania kategorii
+  let obszarMap: Record<string, string> = {};
+  try {
+    const opts = await getAllOptions();
+    obszarMap = Object.fromEntries((opts.obszary || []).map((o: any) => [o.id, o.name]));
+  } catch {
+    obszarMap = {};
+  }
+
   // --- ZADANIA ---
   const zadaniaPages = await queryAll(DATABASES.zadania.database_id);
   const zadania = emptyBuckets();
@@ -80,11 +96,13 @@ export async function buildDashboard() {
     if (status === "Zrobione") continue;
     const termin = dateVal(p, "Termin");
     const item: Item = {
+      id: p.id,
       name: plainTitle(p),
       priorytet: selectVal(p, "Priorytet"),
       status,
       termin,
       terminEnd: dateEndVal(p, "Termin"),
+      obszar: relationName(p, "Obszar", obszarMap),
       url: p.url,
     };
     zadania[bucketOf(termin)].push(item);
@@ -99,11 +117,13 @@ export async function buildDashboard() {
     if (status === "Ukończony" || status === "Archiwum") continue;
     const termin = dateVal(p, "Termin");
     const item: Item = {
+      id: p.id,
       name: plainTitle(p),
       priorytet: selectVal(p, "Priorytet"),
       status,
       termin,
       terminEnd: dateEndVal(p, "Termin"),
+      obszar: relationName(p, "Obszar", obszarMap),
       url: p.url,
     };
     projektyActive.push(item);
@@ -119,10 +139,12 @@ export async function buildDashboard() {
     const b = bucketOf(termin);
     if (b === "overdue" || b === "today" || b === "week" || b === "noDate") {
       rutynyDue.push({
+        id: p.id,
         name: plainTitle(p),
         czestotliwosc: selectVal(p, "Częstotliwość"),
         termin,
         terminEnd: dateEndVal(p, "Następny termin"),
+        obszar: relationName(p, "Obszar", obszarMap),
         url: p.url,
       });
     }
