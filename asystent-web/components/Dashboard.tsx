@@ -242,16 +242,43 @@ function Workload({ wd }: { wd: WD[] }) {
 }
 
 /* ---------- Plan na dziś ---------- */
-function PlanToday({ data, onBack }: { data: Data; onBack: () => void }) {
+function PlanCheck({ it, onDone, busyId }: any) {
+  const k = it.czestotliwosc ? "rutyna" : "zadanie";
+  if (!it.id) return null;
+  return (
+    <button
+      className={"check" + (busyId === it.id ? " on" : "")}
+      disabled={busyId === it.id}
+      onClick={() => onDone(it, k)}
+      title="Odhacz"
+    >
+      {busyId === it.id ? "✓" : ""}
+    </button>
+  );
+}
+
+function PlanToday({ data, onBack, onDone, busyId }: any) {
+  const [aplan, setAplan] = useState<any[]>([]);
+  const [aLoading, setALoading] = useState(false);
   const h = new Date().getHours();
   const greet = h < 12 ? "Dzień dobry" : h < 18 ? "Miłego popołudnia" : "Dobry wieczór";
   const overdue = sortItems(data.zadania.overdue);
   const todayTasks = sortItems(data.zadania.today);
-  const todayRoutines = data.rutynyDue.filter((r) => r.termin && r.termin.slice(0, 10) === data.today);
+  const todayRoutines = data.rutynyDue.filter((r: Item) => r.termin && r.termin.slice(0, 10) === data.today);
   const all = todayTasks.concat(todayRoutines);
   const mit = overdue.concat(todayTasks).slice(0, 3);
-  const timed = all.filter((e) => timeOf(e)).sort((a, b) => timeOf(a).localeCompare(timeOf(b)));
-  const untimed = all.filter((e) => !timeOf(e));
+  const timed = all.filter((e: Item) => timeOf(e)).sort((a: Item, b: Item) => timeOf(a).localeCompare(timeOf(b)));
+  const untimed = sortItems(all.filter((e: Item) => !timeOf(e)));
+
+  async function makePlan() {
+    setALoading(true);
+    try {
+      const r = await fetch("/api/plan", { method: "POST" });
+      const d = await r.json();
+      setAplan(Array.isArray(d.plan) ? d.plan : []);
+    } catch {}
+    setALoading(false);
+  }
 
   return (
     <div className="plan">
@@ -269,31 +296,46 @@ function PlanToday({ data, onBack }: { data: Data; onBack: () => void }) {
       {mit.length > 0 && (
         <div className="mit">
           <div className="mit-h">⭐ 3 najważniejsze dziś</div>
-          {mit.map((it, i) => (
-            <a className="mit-card" key={i} href={it.url} target="_blank" rel="noreferrer" style={{ borderLeftColor: prioColor(it.priorytet) }}>
-              <span className="mit-num">{i + 1}</span>
-              <span className="mit-name">{it.name}</span>
+          {mit.map((it: Item, i: number) => (
+            <div className="mit-card anim-in" key={i} style={{ borderLeftColor: prioColor(it.priorytet) }}>
+              <PlanCheck it={it} onDone={onDone} busyId={busyId} />
+              <a className="mit-name" href={it.url} target="_blank" rel="noreferrer">{it.name}</a>
               {it.termin && <span className="it-date">{fmtTermin(it)}</span>}
-            </a>
+            </div>
           ))}
           {mit[0] && <div className="focus">▶ Zacznij od: <b>{mit[0].name}</b></div>}
         </div>
       )}
 
-      {overdue.length > 0 && (
-        <div className="plan-overdue">⚠️ {overdue.length} zaległych — najpilniejsze: <b>{overdue[0].name}</b></div>
-      )}
+      <div className="plan-block">
+        <div className="plan-block-h">🧭 Plan działania</div>
+        <button className="sug-btn" onClick={makePlan} disabled={aLoading}>
+          {aLoading ? "Układam…" : "Ułóż plan działania"}
+        </button>
+        {aplan.length > 0 && (
+          <ol className="aplan">
+            {aplan.map((s, i) => (
+              <li className="anim-in" key={i}>
+                {s.kiedy && <span className="aplan-when">{s.kiedy}</span>}
+                <span className="aplan-co">{s.co}</span>
+                {s.dlaczego && <span className="aplan-why">{s.dlaczego}</span>}
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
 
       {timed.length > 0 && (
         <div className="plan-block">
           <div className="plan-block-h">🕒 Oś czasu</div>
           <div className="timeline">
-            {timed.map((e, i) => (
-              <a className="tl-ev" key={i} href={e.url} target="_blank" rel="noreferrer">
+            {timed.map((e: Item, i: number) => (
+              <div className="tl-ev anim-in" key={i}>
                 <div className="tl-time">{timeOf(e)}</div>
                 <div className="tl-dot" style={{ background: prioColor(e.priorytet) }} />
-                <div className="tl-name">{e.name}</div>
-              </a>
+                <PlanCheck it={e} onDone={onDone} busyId={busyId} />
+                <a className="tl-name" href={e.url} target="_blank" rel="noreferrer">{e.name}</a>
+              </div>
             ))}
           </div>
         </div>
@@ -302,11 +344,12 @@ function PlanToday({ data, onBack }: { data: Data; onBack: () => void }) {
       {untimed.length > 0 && (
         <div className="plan-block">
           <div className="plan-block-h">📋 W ciągu dnia</div>
-          {sortItems(untimed).map((e, i) => (
-            <a className="tl-ev flat" key={i} href={e.url} target="_blank" rel="noreferrer">
+          {untimed.map((e: Item, i: number) => (
+            <div className="tl-ev flat anim-in" key={i}>
+              <PlanCheck it={e} onDone={onDone} busyId={busyId} />
               <div className="tl-dot" style={{ background: prioColor(e.priorytet) }} />
-              <div className="tl-name">{e.name}</div>
-            </a>
+              <a className="tl-name" href={e.url} target="_blank" rel="noreferrer">{e.name}</a>
+            </div>
           ))}
         </div>
       )}
@@ -461,10 +504,14 @@ export default function Dashboard() {
       {loading && !data && <div className="dash-loading">Ładuję…</div>}
       {err && <div className="login-error">⚠️ {err}</div>}
 
-      {data && plan && <PlanToday data={data} onBack={() => setPlan(false)} />}
+      {data && plan && (
+        <div className="view" key="plan">
+          <PlanToday data={data} onBack={() => setPlan(false)} onDone={onDone} busyId={busyId} />
+        </div>
+      )}
 
       {data && !plan && (
-        <>
+        <div className="view" key="panel">
           {prog && prog.total > 0 && (
             <div className="prog">
               <div className="prog-h"><span>Dziś zrobione</span><span>{prog.done}/{prog.total}</span></div>
@@ -518,7 +565,7 @@ export default function Dashboard() {
           {data.counts.zalegle + data.counts.dzis + data.counts.tydzien + data.counts.rutyny === 0 && (
             <div className="dash-clear">Czysto na najbliższe dni 🎉</div>
           )}
-        </>
+        </div>
       )}
 
       {undo && (

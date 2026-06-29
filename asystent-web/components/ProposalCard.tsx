@@ -44,6 +44,8 @@ export default function ProposalCard({ proposal, databases, obszary, projekty, o
   const db = databases.find((d) => d.key === target) || databases[0];
   const missing = new Set(proposal.missing || []);
 
+  const [dismissed, setDismissed] = useState(false);
+
   function setField(name: string, value: any) {
     setFields((f) => ({ ...f, [name]: value }));
   }
@@ -69,6 +71,8 @@ export default function ProposalCard({ proposal, databases, obszary, projekty, o
   function relOptionsFor(f: FieldDef) {
     return f.relationTo === "projekty" ? projekty : obszary;
   }
+
+  if (dismissed) return null;
 
   if (state === "done") {
     return (
@@ -204,6 +208,9 @@ export default function ProposalCard({ proposal, databases, obszary, projekty, o
       <div className="card-actions">
         <button className="btn primary" onClick={commit} disabled={state === "saving"}>
           {state === "saving" ? "Zapisuję..." : "Zatwierdź → Notion"}
+        </button>
+        <button className="btn" onClick={() => setDismissed(true)} disabled={state === "saving"}>
+          Anuluj
         </button>
       </div>
     </div>

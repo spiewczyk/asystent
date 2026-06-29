@@ -25,22 +25,31 @@ export async function fetchRelationOptions(databaseId: string) {
   return out;
 }
 
-// Tytuły otwartych zadań i projektów — do wykrywania duplikatów.
+// Tytuły otwartych zadań i projektów wraz z Obszarem/Projektem — do duplikatów
+// i do kopiowania Obszaru na podobne wpisy.
 export async function fetchOpenTitles(): Promise<string[]> {
+  const opts = await getAllOptions().catch(() => ({ obszary: [], projekty: [] }));
+  const omap: Record<string, string> = Object.fromEntries((opts.obszary || []).map((o: any) => [o.id, o.name]));
+  const pmap: Record<string, string> = Object.fromEntries((opts.projekty || []).map((o: any) => [o.id, o.name]));
   const titles: string[] = [];
-  const grab = async (databaseId: string) => {
+  const grab = async (databaseId: string, isTask: boolean) => {
     try {
       const r: any = await notion.databases.query({ database_id: databaseId, page_size: 50 });
       for (const p of r.results) {
         const t: any = Object.values(p.properties).find((x: any) => x.type === "title");
         const n = t?.title?.map((x: any) => x.plain_text).join("");
-        if (n) titles.push(n);
+        if (!n) continue;
+        const obId = p.properties?.["Obszar"]?.relation?.[0]?.id;
+        const obN = obId ? omap[obId] : "";
+        const prId = isTask ? p.properties?.["Projekt"]?.relation?.[0]?.id : "";
+        const prN = prId ? pmap[prId] : "";
+        titles.push(n + (obN ? ` [Obszar: ${obN}]` : "") + (prN ? ` [Projekt: ${prN}]` : ""));
       }
     } catch {}
   };
   await Promise.all([
-    grab(DATABASES.zadania.database_id),
-    grab(DATABASES.projekty.database_id),
+    grab(DATABASES.zadania.database_id, true),
+    grab(DATABASES.projekty.database_id, false),
   ]);
   return titles;
 }
