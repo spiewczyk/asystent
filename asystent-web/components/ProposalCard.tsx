@@ -18,6 +18,8 @@ export interface Proposal {
   fields: Record<string, any>;
   missing?: string[];
   questions?: string[];
+  followups?: string[];
+  warning?: string;
   confidence?: number;
 }
 
@@ -26,9 +28,10 @@ interface Props {
   databases: DbDef[];
   obszary: { name: string }[];
   projekty: { name: string }[];
+  onFollowup?: (text: string) => void;
 }
 
-export default function ProposalCard({ proposal, databases, obszary, projekty }: Props) {
+export default function ProposalCard({ proposal, databases, obszary, projekty, onFollowup }: Props) {
   const [target, setTarget] = useState(proposal.target);
   const [fields, setFields] = useState<Record<string, any>>({
     Nazwa: proposal.title,
@@ -104,6 +107,8 @@ export default function ProposalCard({ proposal, databases, obszary, projekty }:
         )}
       </div>
 
+      {proposal.warning && <div className="warn">⚠️ {proposal.warning}</div>}
+
       {db.fields.map((f) => {
         const isMissing = missing.has(f.name);
         const val = fields[f.name] ?? "";
@@ -129,12 +134,28 @@ export default function ProposalCard({ proposal, databases, obszary, projekty }:
                 ))}
               </select>
             ) : f.type === "date" ? (
-              <input
-                type="text"
-                placeholder="RRRR-MM-DD"
-                value={val}
-                onChange={(e) => setField(f.name, e.target.value)}
-              />
+              (() => {
+                const dv =
+                  val && typeof val === "object"
+                    ? { start: val.start || "", end: val.end || "" }
+                    : { start: val || "", end: "" };
+                return (
+                  <div className="daterange">
+                    <input
+                      type="text"
+                      placeholder="od RRRR-MM-DD"
+                      value={dv.start}
+                      onChange={(e) => setField(f.name, { start: e.target.value, end: dv.end })}
+                    />
+                    <input
+                      type="text"
+                      placeholder="do (opcjonalnie)"
+                      value={dv.end}
+                      onChange={(e) => setField(f.name, { start: dv.start, end: e.target.value })}
+                    />
+                  </div>
+                );
+              })()
             ) : f.type === "checkbox" ? (
               <input
                 type="checkbox"
@@ -159,6 +180,22 @@ export default function ProposalCard({ proposal, databases, obszary, projekty }:
               <li key={i}>{q}</li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {proposal.followups && proposal.followups.length > 0 && (
+        <div className="followups">
+          <span className="followups-l">Następny krok:</span>
+          {proposal.followups.map((f, i) => (
+            <button
+              key={i}
+              className="followup"
+              onClick={() => onFollowup && onFollowup(f)}
+              title="Dodaj jako kolejny wpis"
+            >
+              + {f}
+            </button>
+          ))}
         </div>
       )}
 

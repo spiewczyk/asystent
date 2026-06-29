@@ -25,6 +25,26 @@ export async function fetchRelationOptions(databaseId: string) {
   return out;
 }
 
+// Tytuły otwartych zadań i projektów — do wykrywania duplikatów.
+export async function fetchOpenTitles(): Promise<string[]> {
+  const titles: string[] = [];
+  const grab = async (databaseId: string) => {
+    try {
+      const r: any = await notion.databases.query({ database_id: databaseId, page_size: 50 });
+      for (const p of r.results) {
+        const t: any = Object.values(p.properties).find((x: any) => x.type === "title");
+        const n = t?.title?.map((x: any) => x.plain_text).join("");
+        if (n) titles.push(n);
+      }
+    } catch {}
+  };
+  await Promise.all([
+    grab(DATABASES.zadania.database_id),
+    grab(DATABASES.projekty.database_id),
+  ]);
+  return titles;
+}
+
 export async function getAllOptions() {
   const [obszary, projekty] = await Promise.all([
     fetchRelationOptions(RELATION_SOURCES.obszary),
@@ -69,9 +89,17 @@ function buildProperties(
       case "select":
         props[f.name] = { select: { name: String(v) } };
         break;
-      case "date":
-        props[f.name] = { date: { start: String(v) } };
+      case "date": {
+        if (v && typeof v === "object") {
+          if (!v.start && !v.end) break; // pusty zakres — pomiń
+          const start = v.start || v.end;
+          const end = v.end && v.end !== v.start ? v.end : undefined;
+          props[f.name] = { date: end ? { start, end } : { start } };
+        } else {
+          props[f.name] = { date: { start: String(v) } };
+        }
         break;
+      }
       case "checkbox":
         props[f.name] = { checkbox: Boolean(v) };
         break;

@@ -51,7 +51,7 @@ export default function Home() {
     setInput("");
     // Anthropic odrzuca puste wiadomości — pomijamy je, a propozycje bez tekstu
     // streszczamy, żeby zachować kontekst rozmowy.
-    const history = items
+    const raw = items
       .map((i) => {
         let content = i.content;
         if (!content && i.proposals && i.proposals.length) {
@@ -63,6 +63,16 @@ export default function Home() {
         return { role: i.role, content };
       })
       .filter((m) => m.content && m.content.trim() !== "");
+
+    // Wymuś naprzemienność ról (Gemini tego wymaga): scal sąsiednie tej samej roli
+    const history: { role: "user" | "assistant"; content: string }[] = [];
+    for (const m of raw) {
+      const last = history[history.length - 1];
+      if (last && last.role === m.role) last.content += "\n" + m.content;
+      else history.push({ ...m });
+    }
+    // Rozmowa wysyłana do AI musi zaczynać się od użytkownika
+    while (history.length && history[0].role === "assistant") history.shift();
     const newItems: ChatItem[] = [...items, { role: "user", content: message }];
     setItems(newItems);
     setLoading(true);
@@ -94,6 +104,42 @@ export default function Home() {
     router.refresh();
   }
 
+  async function runAudit() {
+    if (loading) return;
+    setItems((it) => [...it, { role: "assistant", content: "🔍 Analizuję strukturę systemu…" }]);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/audit", { method: "POST" });
+      const data = await res.json();
+      const text =
+        res.ok && data.suggestions?.length
+          ? "🔍 Audyt systemu — propozycje:\n\n" +
+            data.suggestions.map((s: string) => "• " + s).join("\n")
+          : "⚠️ " + (data.error || "Brak sugestii.");
+      setItems((it) => [...it, { role: "assistant", content: text }]);
+    } catch {
+      setItems((it) => [...it, { role: "assistant", content: "⚠️ Błąd audytu" }]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function startVoice() {
+    const SR: any = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if (!SR) {
+      alert("Twoja przeglądarka nie obsługuje dyktowania. Użyj Chrome.");
+      return;
+    }
+    const rec = new SR();
+    rec.lang = "pl-PL";
+    rec.interimResults = false;
+    rec.onresult = (e: any) => {
+      const text = e.results[0][0].transcript;
+      setInput((prev) => (prev ? prev + " " : "") + text);
+    };
+    rec.start();
+  }
+
   function onKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -113,9 +159,14 @@ export default function Home() {
           <h1>🧠 Asystent</h1>
           <div className="sub">Pisz, co masz do zrobienia — przypiszę to do Notion</div>
         </div>
-        <button className="logout" onClick={logout}>
-          Wyloguj
-        </button>
+        <div className="nav">
+          <button className="navlink" onClick={runAudit} title="Audyt struktury systemu">
+            🔍 Audyt
+          </button>
+          <button className="logout" onClick={logout}>
+            Wyloguj
+          </button>
+        </div>
       </div>
 
       <div className="chat" ref={chatRef}>
@@ -149,6 +200,7 @@ export default function Home() {
                     databases={meta.databases}
                     obszary={meta.obszary}
                     projekty={meta.projekty}
+                    onFollowup={(t) => send(t)}
                   />
                 ))}
               </div>
@@ -161,6 +213,9 @@ export default function Home() {
 
       <div className="composer">
         <div className="composer-inner">
+          <button className="mic" onClick={startVoice} title="Dyktuj głosem">
+            🎤
+          </button>
           <textarea
             rows={1}
             placeholder="Np. „Jutro zadzwonić do studia, w piątek deadline na mix…”"

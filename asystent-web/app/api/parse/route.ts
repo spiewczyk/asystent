@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getAllOptions } from "../../../lib/notion";
+import { getAllOptions, fetchOpenTitles } from "../../../lib/notion";
 import { buildSystemPrompt } from "../../../lib/prompt";
+import { readRules, appendRules } from "../../../lib/memory";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -32,11 +33,17 @@ export async function POST(req: Request) {
     }
     const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
-    const options = await getAllOptions();
+    const [options, rules, existingTitles] = await Promise.all([
+      getAllOptions(),
+      readRules(),
+      fetchOpenTitles(),
+    ]);
     const system = buildSystemPrompt({
       obszary: options.obszary,
       projekty: options.projekty,
       today: todayStr(),
+      rules,
+      existingTitles,
     });
 
     // Gemini używa ról "user" / "model".
@@ -86,6 +93,14 @@ export async function POST(req: Request) {
     if (!parsed || typeof parsed !== "object") parsed = { reply: "", proposals: [] };
     if (typeof parsed.reply !== "string") parsed.reply = "";
     if (!Array.isArray(parsed.proposals)) parsed.proposals = [];
+
+    // Nauka: dopisz nowe reguły do "Pamięci asystenta"
+    if (Array.isArray(parsed.memory) && parsed.memory.length) {
+      await appendRules(parsed.memory);
+      const note = "📝 Zapamiętałem: " + parsed.memory.join("; ");
+      parsed.reply = parsed.reply ? parsed.reply + "\n" + note : note;
+    }
+
     return NextResponse.json(parsed);
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Błąd AI" }, { status: 500 });
