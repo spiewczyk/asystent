@@ -437,6 +437,174 @@ button {
   color: #8a5cd1;
 }
 
+/* szybkie dodawanie */
+.quick {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.quick input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+}
+.quick input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.quick button {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+.quick button:disabled {
+  opacity: 0.5;
+}
+
+/* postęp dnia */
+.prog {
+  margin-bottom: 10px;
+}
+.prog-h {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+.prog-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.prog-fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 6px;
+  transition: width 0.3s;
+}
+
+/* wykres obciążenia */
+.wl {
+  margin: 12px 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+}
+.wl-title {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-bottom: 8px;
+}
+.wl-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 5px;
+  height: 70px;
+}
+.wl-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+.wl-n {
+  font-size: 10px;
+  color: var(--text-light);
+  height: 12px;
+}
+.wl-bar {
+  width: 70%;
+  background: var(--accent);
+  border-radius: 4px 4px 0 0;
+  opacity: 0.55;
+}
+.wl-bar.is-today {
+  opacity: 1;
+}
+.wl-l {
+  font-size: 10px;
+  color: var(--text-light);
+  margin-top: 4px;
+}
+
+/* filtr kategorii */
+.cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 12px 0 4px;
+}
+.cat {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--text-light);
+}
+.cat.on {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+/* teraz najważniejsze */
+.topnow {
+  margin: 12px 0;
+  background: #fef6ec;
+  border: 1px solid #f3d9b3;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.topnow-l {
+  font-size: 11px;
+  color: #9a6700;
+  margin-bottom: 4px;
+}
+.topnow-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.topnow-name a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* przyciski przełożenia terminu */
+.resched {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.resched button {
+  background: var(--block);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 7px;
+  font-size: 11px;
+  color: var(--text-light);
+}
+.resched button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
 /* sugestie */
 .sug-btn {
   margin-top: 4px;

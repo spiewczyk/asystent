@@ -88,13 +88,37 @@ export async function buildDashboard() {
     obszarMap = {};
   }
 
+  // dni najbliższego tygodnia (obciążenie)
+  const workloadMap: Record<string, number> = {};
+  const weekDays: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+    const ds = d.toISOString().slice(0, 10);
+    weekDays.push(ds);
+    workloadMap[ds] = 0;
+  }
+  let dzisDone = 0;
+  let dzisTotal = 0;
+
   // --- ZADANIA ---
   const zadaniaPages = await queryAll(DATABASES.zadania.database_id);
   const zadania = emptyBuckets();
   for (const p of zadaniaPages) {
     const status = selectVal(p, "Status");
-    if (status === "Zrobione") continue;
     const termin = dateVal(p, "Termin");
+    const dayKey = termin ? termin.slice(0, 10) : "";
+
+    // statystyki dnia (łącznie ze zrobionymi)
+    if (dayKey === todayStr) {
+      dzisTotal++;
+      if (status === "Zrobione") dzisDone++;
+    }
+    if (status === "Zrobione") continue;
+
+    // obciążenie tygodnia (niezrobione, ze startem w danym dniu)
+    if (dayKey && dayKey in workloadMap) workloadMap[dayKey]++;
+
     const item: Item = {
       id: p.id,
       name: plainTitle(p),
@@ -107,6 +131,14 @@ export async function buildDashboard() {
     };
     zadania[bucketOf(termin)].push(item);
   }
+
+  const wdShort = ["Nd", "Pon", "Wt", "Śr", "Czw", "Pt", "Sob"];
+  const workload = weekDays.map((ds) => ({
+    date: ds,
+    label: wdShort[new Date(ds + "T00:00:00").getDay()],
+    count: workloadMap[ds] || 0,
+  }));
+  const todayStats = { done: dzisDone, total: dzisTotal };
 
   // --- PROJEKTY ---
   const projektyPages = await queryAll(DATABASES.projekty.database_id);
@@ -159,5 +191,14 @@ export async function buildDashboard() {
     rutyny: rutynyDue.length,
   };
 
-  return { today: todayStr, zadania, projekty, projektyActive, rutynyDue, counts };
+  return {
+    today: todayStr,
+    zadania,
+    projekty,
+    projektyActive,
+    rutynyDue,
+    counts,
+    workload,
+    todayStats,
+  };
 }
