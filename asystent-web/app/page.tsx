@@ -102,7 +102,12 @@ export default function Home() {
   }
 
   return (
-    <div className="app">
+    <div className="shell">
+      <aside className="side">
+        <Dashboard />
+      </aside>
+
+      <section className="main">
       <div className="topbar">
         <div>
           <h1>🧠 Asystent</h1>
@@ -114,8 +119,6 @@ export default function Home() {
       </div>
 
       <div className="chat" ref={chatRef}>
-        <Dashboard />
-
         {items.length === 0 && (
           <div className="empty">
             Napisz w skrócie, co masz na głowie.
@@ -170,6 +173,7 @@ export default function Home() {
           </button>
         </div>
       </div>
+      </section>
     </div>
   );
 }

@@ -45,6 +45,51 @@ button {
   padding: 0 20px;
 }
 
+/* Dwukolumnowy, wyśrodkowany układ: panel z lewej, czat z prawej */
+.shell {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  gap: 22px;
+  padding: 0 18px;
+  min-height: 100vh;
+}
+.side {
+  width: 320px;
+  flex-shrink: 0;
+  padding-top: 18px;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+@media (max-width: 860px) {
+  .shell {
+    flex-direction: column;
+    gap: 0;
+    padding: 0 14px;
+  }
+  .side {
+    width: auto;
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding-top: 12px;
+  }
+  .main {
+    min-height: auto;
+  }
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -79,7 +124,7 @@ button {
 .chat {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 4px 140px;
+  padding: 20px 4px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -266,16 +311,12 @@ button {
 
 /* ---------- Composer ---------- */
 .composer {
-  position: fixed;
+  position: sticky;
   bottom: 0;
-  left: 0;
-  right: 0;
   background: linear-gradient(to top, var(--bg) 70%, rgba(255, 255, 255, 0));
-  padding: 14px 20px 22px;
+  padding: 12px 0 18px;
 }
 .composer-inner {
-  max-width: 760px;
-  margin: 0 auto;
   display: flex;
   gap: 8px;
   align-items: flex-end;

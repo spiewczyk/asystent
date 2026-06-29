@@ -6,8 +6,16 @@ interface Item {
   priorytet?: string;
   status?: string;
   termin?: string;
+  terminEnd?: string;
   czestotliwosc?: string;
   url?: string;
+}
+
+function fmtTermin(it: Item) {
+  if (!it.termin) return "";
+  const s = it.termin.slice(0, 10);
+  const e = it.terminEnd ? it.terminEnd.slice(0, 10) : "";
+  return e && e !== s ? `${s}–${e}` : s;
 }
 interface Buckets {
   overdue: Item[];
@@ -35,7 +43,7 @@ function ItemRow({ it }: { it: Item }) {
     <>
       {prioDot(it.priorytet)}
       <span className="it-name">{it.name}</span>
-      {it.termin && <span className="it-date">{it.termin.slice(0, 10)}</span>}
+      {it.termin && <span className="it-date">{fmtTermin(it)}</span>}
       {it.czestotliwosc && <span className="it-tag">{it.czestotliwosc}</span>}
     </>
   );

@@ -12,6 +12,9 @@ function selectVal(page: any, name: string): string {
 function dateVal(page: any, name: string): string {
   return page.properties?.[name]?.date?.start || "";
 }
+function dateEndVal(page: any, name: string): string {
+  return page.properties?.[name]?.date?.end || "";
+}
 function checkboxVal(page: any, name: string): boolean {
   return !!page.properties?.[name]?.checkbox;
 }
@@ -36,6 +39,7 @@ export interface Item {
   priorytet?: string;
   status?: string;
   termin?: string;
+  terminEnd?: string;
   czestotliwosc?: string;
   url?: string;
 }
@@ -80,6 +84,7 @@ export async function buildDashboard() {
       priorytet: selectVal(p, "Priorytet"),
       status,
       termin,
+      terminEnd: dateEndVal(p, "Termin"),
       url: p.url,
     };
     zadania[bucketOf(termin)].push(item);
@@ -98,6 +103,7 @@ export async function buildDashboard() {
       priorytet: selectVal(p, "Priorytet"),
       status,
       termin,
+      terminEnd: dateEndVal(p, "Termin"),
       url: p.url,
     };
     projektyActive.push(item);
@@ -116,6 +122,7 @@ export async function buildDashboard() {
         name: plainTitle(p),
         czestotliwosc: selectVal(p, "Częstotliwość"),
         termin,
+        terminEnd: dateEndVal(p, "Następny termin"),
         url: p.url,
       });
     }
